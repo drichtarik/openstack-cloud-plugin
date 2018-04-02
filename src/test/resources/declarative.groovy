@@ -1,7 +1,7 @@
 pipeline {
     agent {
         openstack {
-            label 'none'
+            cloud 'openstack'
         }
     }
     stages {
