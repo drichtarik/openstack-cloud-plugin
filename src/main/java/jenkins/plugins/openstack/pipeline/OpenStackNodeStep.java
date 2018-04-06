@@ -19,16 +19,15 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.Set;
 
-public class SlaveTemplateStep extends Step implements Serializable{
+public class OpenStackNodeStep extends Step implements Serializable{
 
     private static final String DEFAULT_CLOUD = JCloudsSlaveTemplate.OPENSTACK_CLOUD_NAME_KEY;
 
     private String cloud = DEFAULT_CLOUD;
-    private String scope = "run";
     private SlaveOptions slaveOptions;
 
     @DataBoundConstructor
-    public SlaveTemplateStep(String cloud) {
+    public OpenStackNodeStep(String cloud) {
         this.cloud = cloud;
     }
 
@@ -39,22 +38,6 @@ public class SlaveTemplateStep extends Step implements Serializable{
 
     public void setCloud(String cloud) {
         this.cloud = cloud;
-    }
-
-    @Nonnull
-    public String getScope() {
-        return scope;
-    }
-
-    @DataBoundSetter
-    public void setScope(@CheckForNull String scope) {
-        if (scope != null) {
-            if ("run".equals(scope) || scope.startsWith("unlimited:")) {
-                this.scope = scope;
-            } else {
-                throw new IllegalArgumentException("Invalid scope: " + scope);
-            }
-        }
     }
 
     //@Nonnull
@@ -69,11 +52,8 @@ public class SlaveTemplateStep extends Step implements Serializable{
 
     @Override
     public StepExecution start(StepContext stepContext) throws Exception {
-        if (scope.equals("run")) {
-            scope = new ServerScope.Build(stepContext.get(Run.class)).getValue();
-        }
-        ServerScope.parse(scope);
-        return new SlaveTemplateStepExecution(this, stepContext);
+        System.out.println("Nulte hw id: " + slaveOptions.getHardwareId());
+        return new OpenStackNodeStepExecution(this, stepContext);
     }
 
     @Extension(optional = true)
@@ -81,7 +61,7 @@ public class SlaveTemplateStep extends Step implements Serializable{
 
         @Override
         public String getFunctionName() {
-            return "slaveTemplateStep";
+            return "openStackNodeStep";
         }
 
         @Override

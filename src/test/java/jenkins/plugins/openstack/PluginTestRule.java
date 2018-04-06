@@ -265,7 +265,7 @@ public final class PluginTestRule extends JenkinsRule {
      * The provisioning future will never complete as it will wait for launch.
      */
     public JCloudsCloud configureSlaveProvisioning(JCloudsCloud cloud) {
-        if (cloud.getTemplates().size() == 0) throw new Error("Unable to provision - no templates provided");
+        //if (cloud.getTemplates().size() == 0) throw new Error("Unable to provision - no templates provided");
 
         final List<Server> running = new ArrayList<>();
 

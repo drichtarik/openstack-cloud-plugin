@@ -55,7 +55,7 @@ public class JCloudsSlave extends AbstractCloudSlave implements TrackedItem {
     private transient @Deprecated Server metadata;
 
     public JCloudsSlave(
-            @Nonnull ProvisioningActivity.Id id, @Nonnull Server metadata, @Nonnull String labelString, @Nonnull SlaveOptions slaveOptions
+            ProvisioningActivity.Id id, @Nonnull Server metadata, String labelString, @Nonnull SlaveOptions slaveOptions
     ) throws IOException, Descriptor.FormException {
         super(
                 metadata.getName(),

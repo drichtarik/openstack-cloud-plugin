@@ -15,31 +15,23 @@ import java.util.TreeMap;
 public class DeclarativeOpenstackAgent extends DeclarativeAgent<DeclarativeOpenstackAgent> {
 
     private String cloud;
-    private SlaveOptions slaveOptions;
+    private SlaveOptions options;
 
     @DataBoundConstructor
     public DeclarativeOpenstackAgent(String cloud) {
         this.cloud = cloud;
     }
 
-    public String getCloud() {
-        return cloud;
-    }
-
-    public SlaveOptions getSlaveOptions() {
-        return slaveOptions;
-    }
-
     @DataBoundSetter
-    public void setSlaveOptions(SlaveOptions slaveOptions) {
-        this.slaveOptions = slaveOptions;
+    public void setOptions(SlaveOptions options) {
+        this.options = options;
     }
 
     public Map<String,Object> getAsArgs() {
         Map<String,Object> argMap = new TreeMap<>();
 
         argMap.put("cloud", cloud);
-        argMap.put("slaveOptions", slaveOptions);
+        argMap.put("slaveOptions", options);
 
         return argMap;
     }

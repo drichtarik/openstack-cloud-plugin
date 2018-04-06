@@ -2,7 +2,7 @@ import jenkins.plugins.openstack.compute.slaveopts.BootSource
 import jenkins.plugins.openstack.compute.slaveopts.BootSource.Image
 import jenkins.plugins.openstack.compute.slaveopts.LauncherFactory
 import jenkins.plugins.openstack.compute.slaveopts.LauncherFactory.SSH
-import org.openstack4j.model.storage.block.VolumeSnapshot
+
 
 
 pipeline {
@@ -10,9 +10,9 @@ pipeline {
         openstack {
             cloud 'openstack'
             options {
-                bootsource {
-                    volumeSnapshot {
-                        volumeSnapshot "volumesnapshot"
+                $class BootSource BootSource {
+                    $class Image Image {
+                        name 'dummyImageId'
                     }
                 }
                 hardwareId 'hardverAjDi'

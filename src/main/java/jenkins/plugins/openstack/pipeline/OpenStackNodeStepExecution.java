@@ -1,37 +1,44 @@
 package jenkins.plugins.openstack.pipeline;
 
+import jenkins.plugins.openstack.compute.JCloudsCloud;
+import jenkins.plugins.openstack.compute.JCloudsSlave;
 import jenkins.plugins.openstack.compute.SlaveOptions;
+import jenkins.plugins.openstack.compute.TemporaryServer;
+import org.jenkinsci.plugins.cloudstats.ProvisioningActivity;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 
 import javax.annotation.Nonnull;
 
-public class SlaveTemplateStepExecution extends SynchronousNonBlockingStepExecution<SimplifiedServer> {
+public class OpenStackNodeStepExecution extends SynchronousNonBlockingStepExecution<JCloudsSlave> {
 
     private final @Nonnull String cloudName;
-    private final @Nonnull String scope;
     //@NotNull on SlaveOptions removed for simlified test to work
     private SlaveOptions slaveOptions;
+    private TemporaryServer temporaryServer;
 
     /*
     private JCloudsSlaveTemplate jCloudsSlaveTemplate = null;
     private final SlaveOptions slaveOptions = null;
-    private final transient SlaveTemplateStep slaveTemplateStep;
+    private final transient OpenStackNodeStep slaveTemplateStep;
     private final String cloudName;
     */
 
-    SlaveTemplateStepExecution(SlaveTemplateStep slaveTemplateStep, StepContext context) {
+    OpenStackNodeStepExecution(OpenStackNodeStep openStackNodeStep, StepContext context) {
         super(context);
-        this.cloudName = slaveTemplateStep.getCloud();
-        this.scope = slaveTemplateStep.getScope();
-        if (slaveTemplateStep.getSlaveOptions() != null) {
-            this.slaveOptions = slaveTemplateStep.getSlaveOptions();
+        this.cloudName = openStackNodeStep.getCloud();
+        if (openStackNodeStep.getSlaveOptions() != null) {
+            this.slaveOptions = openStackNodeStep.getSlaveOptions();
         }
+        System.out.println("Prve boot " + slaveOptions.getBootSource().toString());
+        this.temporaryServer = new TemporaryServer(slaveOptions);
     }
 
     @Override
-    protected SimplifiedServer run() throws Exception {
-        return new SimplifiedServer(this.cloudName, this.slaveOptions, this.scope);
+    protected JCloudsSlave run() throws Exception {
+        JCloudsCloud jcl = JCloudsCloud.getByName(cloudName);
+        ProvisioningActivity.Id id = new ProvisioningActivity.Id(this.cloudName);
+        return temporaryServer.provisionSlave(jcl, id, null);
     }
 
     /*

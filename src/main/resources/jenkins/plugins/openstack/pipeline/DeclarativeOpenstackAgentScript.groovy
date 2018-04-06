@@ -14,7 +14,7 @@ public class DeclarativeOpenstackAgentScript extends DeclarativeAgentScript<Decl
     Closure run(Closure closure) {
         return {
             try {
-                script.slaveTemplateStep(describable.asArgs)
+                script.openStackNodeStep(describable.asArgs)
                 closure.call()
             } catch (Exception e) {
                 script.getProperty("currentBuild").result = Utils.getResultFromException(e)
