@@ -6,6 +6,8 @@ import hudson.model.TaskListener;
 import jenkins.plugins.openstack.compute.JCloudsSlaveTemplate;
 import jenkins.plugins.openstack.compute.ServerScope;
 import jenkins.plugins.openstack.compute.SlaveOptions;
+import jenkins.plugins.openstack.compute.slaveopts.BootSource;
+import jenkins.plugins.openstack.compute.slaveopts.LauncherFactory;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -26,6 +28,23 @@ public class OpenStackNodeStep extends Step implements Serializable{
     private String cloud = DEFAULT_CLOUD;
     private SlaveOptions slaveOptions;
 
+    //another option
+    private String bootSource;
+    private String hardwareId;
+    private String networkId;
+    private String userDataId;
+    private Integer instanceCap;
+    private String floatingIpPool;
+    private String securityGroups;
+    private String availabilityZone;
+    private Integer startTimeout;
+    private String keyPairName;
+    private Integer numExecutors;
+    private String jvmOptions;
+    private String fsRoot;
+    private String launcherFactory;
+    private Integer retentionTime;
+
     @DataBoundConstructor
     public OpenStackNodeStep(String cloud) {
         this.cloud = cloud;
@@ -36,11 +55,6 @@ public class OpenStackNodeStep extends Step implements Serializable{
         return cloud;
     }
 
-    public void setCloud(String cloud) {
-        this.cloud = cloud;
-    }
-
-    //@Nonnull
     public SlaveOptions getSlaveOptions() {
         return slaveOptions;
     }
@@ -50,8 +64,109 @@ public class OpenStackNodeStep extends Step implements Serializable{
         this.slaveOptions = slaveOptions;
     }
 
+    @DataBoundSetter
+    public void setBootSource(String bootSource) {
+        this.bootSource = bootSource;
+    }
+
+    @DataBoundSetter
+    public void setHardwareId(String hardwareId) {
+        this.hardwareId = hardwareId;
+    }
+
+    @DataBoundSetter
+    public void setNetworkId(String networkId) {
+        this.networkId = networkId;
+    }
+
+    @DataBoundSetter
+    public void setUserDataId(String userDataId) {
+        this.userDataId = userDataId;
+    }
+
+    @DataBoundSetter
+    public void setInstanceCap(Integer instanceCap) {
+        this.instanceCap = instanceCap;
+    }
+
+    @DataBoundSetter
+    public void setFloatingIpPool(String floatingIpPool) {
+        this.floatingIpPool = floatingIpPool;
+    }
+
+    @DataBoundSetter
+    public void setSecurityGroups(String securityGroups) {
+        this.securityGroups = securityGroups;
+    }
+
+    @DataBoundSetter
+    public void setAvailabilityZone(String availabilityZone) {
+        this.availabilityZone = availabilityZone;
+    }
+
+    @DataBoundSetter
+    public void setStartTimeout(Integer startTimeout) {
+        this.startTimeout = startTimeout;
+    }
+
+    @DataBoundSetter
+    public void setKeyPairName(String keyPairName) {
+        this.keyPairName = keyPairName;
+    }
+
+    @DataBoundSetter
+    public void setNumExecutors(Integer numExecutors) {
+        this.numExecutors = numExecutors;
+    }
+
+    @DataBoundSetter
+    public void setJvmOptions(String jvmOptions) {
+        this.jvmOptions = jvmOptions;
+    }
+
+    @DataBoundSetter
+    public void setFsRoot(String fsRoot) {
+        this.fsRoot = fsRoot;
+    }
+
+    @DataBoundSetter
+    public void setLauncherFactory(String launcherFactory) {
+        this.launcherFactory = launcherFactory;
+    }
+
+    @DataBoundSetter
+    public void setRetentionTime(Integer retentionTime) {
+        this.retentionTime = retentionTime;
+    }
+
+    public void createSlaveOptions() {
+        BootSource boot = new BootSource.VolumeSnapshot(this.bootSource);
+        LauncherFactory launch = new LauncherFactory.SSH("");
+
+        SlaveOptions altSlaveOptions = new SlaveOptions(
+                boot,
+                this.hardwareId,
+                this.networkId,
+                this.userDataId,
+                this.instanceCap,
+                this.floatingIpPool,
+                this.securityGroups,
+                this.availabilityZone,
+                this.startTimeout,
+                this.keyPairName,
+                this.numExecutors,
+                this.jvmOptions,
+                this.fsRoot,
+                launch,
+                this.retentionTime
+        );
+
+        this.slaveOptions = altSlaveOptions;
+    }
+
     @Override
     public StepExecution start(StepContext stepContext) throws Exception {
+        this.createSlaveOptions();
         System.out.println("Nulte hw id: " + slaveOptions.getHardwareId());
         return new OpenStackNodeStepExecution(this, stepContext);
     }
