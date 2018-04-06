@@ -1,6 +1,5 @@
 package jenkins.plugins.openstack.pipeline;
 
-import jenkins.plugins.openstack.compute.SlaveOptions;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.pipeline.modeldefinition.agent.DeclarativeAgent;
 import org.jenkinsci.plugins.pipeline.modeldefinition.agent.DeclarativeAgentDescriptor;
@@ -15,9 +14,7 @@ import java.util.TreeMap;
 public class DeclarativeOpenstackAgent extends DeclarativeAgent<DeclarativeOpenstackAgent> {
 
     private String cloud;
-    private SlaveOptions options;
-    
-    //another option
+
     private String bootSource;
     private String hardwareId;
     private String networkId;
@@ -33,7 +30,6 @@ public class DeclarativeOpenstackAgent extends DeclarativeAgent<DeclarativeOpens
     private String fsRoot;
     private String launcherFactory;
     private Integer retentionTime;
-    
 
     @DataBoundConstructor
     public DeclarativeOpenstackAgent(String cloud) {
@@ -41,14 +37,7 @@ public class DeclarativeOpenstackAgent extends DeclarativeAgent<DeclarativeOpens
     }
 
     @DataBoundSetter
-    public void setOptions(SlaveOptions options) {
-        this.options = options;
-    }
-
-    @DataBoundSetter
-    public void setBootSource(String bootSource) {
-        this.bootSource = bootSource;
-    }
+    public void setBootSource(String bootSource) { this.bootSource = bootSource; }
 
     @DataBoundSetter
     public void setHardwareId(String hardwareId) {
@@ -56,9 +45,7 @@ public class DeclarativeOpenstackAgent extends DeclarativeAgent<DeclarativeOpens
     }
 
     @DataBoundSetter
-    public void setNetworkId(String networkId) {
-        this.networkId = networkId;
-    }
+    public void setNetworkId(String networkId) { this.networkId = networkId; }
 
     @DataBoundSetter
     public void setUserDataId(String userDataId) {
@@ -139,8 +126,6 @@ public class DeclarativeOpenstackAgent extends DeclarativeAgent<DeclarativeOpens
         argMap.put("fsRoot", fsRoot);
         argMap.put("launcherFactory", launcherFactory);
         argMap.put("retentionTime", retentionTime);
-
-        //argMap.put("slaveOptions", options);
 
         return argMap;
     }

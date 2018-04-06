@@ -1,12 +1,9 @@
 package jenkins.plugins.openstack.pipeline;
 
-import hudson.model.Node;
 import jenkins.plugins.openstack.PluginTestRule;
 import jenkins.plugins.openstack.compute.JCloudsCloud;
-import jenkins.plugins.openstack.compute.JCloudsSlave;
 import jenkins.plugins.openstack.compute.internal.Openstack;
 import org.apache.commons.compress.utils.IOUtils;
-import org.hamcrest.Matchers;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -17,18 +14,14 @@ import org.mockito.ArgumentCaptor;
 import org.openstack4j.model.compute.ServerCreate;
 import org.openstack4j.model.compute.builder.ServerCreateBuilder;
 
-import java.util.Collections;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyIterable;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.endsWith;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 public class OpenstackEnhancedDeclarativePipelineTest {
     @Rule
@@ -39,7 +32,6 @@ public class OpenstackEnhancedDeclarativePipelineTest {
     @Before
     public void setup () {
         cloud = j.configureSlaveLaunching(j.dummyCloud());
-        //cloud = j.createCloudLaunchingDummySlaves("whatever");
         j.jenkins.clouds.add(cloud);
         openstack = cloud.getOpenstack();
     }

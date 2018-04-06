@@ -22,16 +22,4 @@ public class DeclarativeOpenstackAgentScript extends DeclarativeAgentScript<Decl
             }
         }
     }
-
-
-    /* previous experiments
-    @Override
-    Closure run (Closure closure) {
-        return closure;
-    }
-                    //JCloudsSlave slave = /*createSlave * (describable.asArgs)
-    script.node(slaveTemplateStep.nodeName) {
-        closure.call()
-    }
-    */
 }

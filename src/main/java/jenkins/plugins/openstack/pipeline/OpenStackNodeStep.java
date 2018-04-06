@@ -1,10 +1,8 @@
 package jenkins.plugins.openstack.pipeline;
 
 import hudson.Extension;
-import hudson.model.Run;
 import hudson.model.TaskListener;
 import jenkins.plugins.openstack.compute.JCloudsSlaveTemplate;
-import jenkins.plugins.openstack.compute.ServerScope;
 import jenkins.plugins.openstack.compute.SlaveOptions;
 import jenkins.plugins.openstack.compute.slaveopts.BootSource;
 import jenkins.plugins.openstack.compute.slaveopts.LauncherFactory;
@@ -15,7 +13,6 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.io.Serializable;
 import java.util.Collections;
@@ -28,7 +25,6 @@ public class OpenStackNodeStep extends Step implements Serializable{
     private String cloud = DEFAULT_CLOUD;
     private SlaveOptions slaveOptions;
 
-    //another option
     private String bootSource;
     private String hardwareId;
     private String networkId;
@@ -70,9 +66,7 @@ public class OpenStackNodeStep extends Step implements Serializable{
     }
 
     @DataBoundSetter
-    public void setHardwareId(String hardwareId) {
-        this.hardwareId = hardwareId;
-    }
+    public void setHardwareId(String hardwareId) { this.hardwareId = hardwareId; }
 
     @DataBoundSetter
     public void setNetworkId(String networkId) {
@@ -140,10 +134,12 @@ public class OpenStackNodeStep extends Step implements Serializable{
     }
 
     public void createSlaveOptions() {
+        //add conditions for user inputs
+        //also add constraints on instanceCap, numExecutors, retentionTime
         BootSource boot = new BootSource.VolumeSnapshot(this.bootSource);
         LauncherFactory launch = new LauncherFactory.SSH("");
 
-        SlaveOptions altSlaveOptions = new SlaveOptions(
+        SlaveOptions opts = new SlaveOptions(
                 boot,
                 this.hardwareId,
                 this.networkId,
@@ -160,14 +156,12 @@ public class OpenStackNodeStep extends Step implements Serializable{
                 launch,
                 this.retentionTime
         );
-
-        this.slaveOptions = altSlaveOptions;
+        this.slaveOptions = opts;
     }
 
     @Override
     public StepExecution start(StepContext stepContext) throws Exception {
         this.createSlaveOptions();
-        System.out.println("Nulte hw id: " + slaveOptions.getHardwareId());
         return new OpenStackNodeStepExecution(this, stepContext);
     }
 
@@ -183,34 +177,6 @@ public class OpenStackNodeStep extends Step implements Serializable{
         public String getDisplayName() {
             return "Cloud instances provisioning for declarative pipeline";
         }
-
-        /*
-        public ListBoxModel doFillCloudItems() {
-            ListBoxModel r = new ListBoxModel();
-            r.add("", "");
-            Jenkins.CloudList clouds = jenkins.model.Jenkins.getActiveInstance().clouds;
-            for (Cloud cloud: clouds) {
-                if (cloud instanceof JCloudsCloud) {
-                    r.add(cloud.getDisplayName(), cloud.getDisplayName());
-                }
-            }
-            return r;
-        }
-
-        public ListBoxModel doFillTemplateItems(@QueryParameter String cloud) {
-            cloud = Util.fixEmpty(cloud);
-            ListBoxModel r = new ListBoxModel();
-            for (Cloud cl : jenkins.model.Jenkins.getActiveInstance().clouds) {
-                if (cl.getDisplayName().equals(cloud) && (cl instanceof JCloudsCloud)) {
-                    for (JCloudsSlaveTemplate template : ((JCloudsCloud) cl).getTemplates()) {
-                        r.add(template.name);
-                    }
-                }
-            }
-            return r;
-        }
-
-        */
 
         @Override
         public Set<? extends Class<?>> getRequiredContext() {

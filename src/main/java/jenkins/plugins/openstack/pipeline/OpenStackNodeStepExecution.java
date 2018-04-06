@@ -17,20 +17,12 @@ public class OpenStackNodeStepExecution extends SynchronousNonBlockingStepExecut
     private SlaveOptions slaveOptions;
     private TemporaryServer temporaryServer;
 
-    /*
-    private JCloudsSlaveTemplate jCloudsSlaveTemplate = null;
-    private final SlaveOptions slaveOptions = null;
-    private final transient OpenStackNodeStep slaveTemplateStep;
-    private final String cloudName;
-    */
-
     OpenStackNodeStepExecution(OpenStackNodeStep openStackNodeStep, StepContext context) {
         super(context);
         this.cloudName = openStackNodeStep.getCloud();
         if (openStackNodeStep.getSlaveOptions() != null) {
             this.slaveOptions = openStackNodeStep.getSlaveOptions();
         }
-        System.out.println("Prve boot " + slaveOptions.getBootSource().toString());
         this.temporaryServer = new TemporaryServer(slaveOptions);
     }
 
@@ -40,28 +32,4 @@ public class OpenStackNodeStepExecution extends SynchronousNonBlockingStepExecut
         ProvisioningActivity.Id id = new ProvisioningActivity.Id(this.cloudName);
         return temporaryServer.provisionSlave(jcl, id, null);
     }
-
-    /*
-    @Override
-    public boolean start() throws Exception {
-        Cloud cloud = Jenkins.getInstance().getCloud(this.cloudName);
-        if (cloud == null) {
-            throw new AbortException(String.format("Cloud does not exist: %s", this.cloudName));
-        }
-        if (!(cloud instanceof JCloudsCloud)) {
-            throw new AbortException(String.format("Cloud is not an OpenStack cloud: %s (%s)", cloudName,
-                    cloud.getClass().getName()));
-        }
-
-        JCloudsCloud jCloudsCloud = (JCloudsCloud) cloud;
-
-        Run<?, ?> run = getContext().get(Run.class);
-
-        slaveOptions.getBuilder().hardwareId("123456");
-
-        jCloudsSlaveTemplate = new JCloudsSlaveTemplate(slaveTemplateStep.getName(), slaveTemplateStep.getLabel(), slaveOptions);
-
-        return false;
-    }
-    */
 }

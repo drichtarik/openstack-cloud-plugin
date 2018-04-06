@@ -3,7 +3,6 @@ package jenkins.plugins.openstack.compute;
 import au.com.bytecode.opencsv.CSVReader;
 import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
-import groovy.ui.SystemOutputInterceptor;
 import hudson.Util;
 import hudson.model.TaskListener;
 import hudson.remoting.Base64;
@@ -31,6 +30,7 @@ import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
+//copied from JCloudsSlaveTemplate and simplified
 public class TemporaryServer implements Serializable {
 
     private static final Logger LOGGER = Logger.getLogger(TemporaryServer.class.getName());
@@ -38,7 +38,6 @@ public class TemporaryServer implements Serializable {
 
     private static final AtomicInteger nodeCounter = new AtomicInteger();
 
-    // Difference compared to cloud
     private SlaveOptions slaveOptions;
     private transient JCloudsCloud cloud;
 
