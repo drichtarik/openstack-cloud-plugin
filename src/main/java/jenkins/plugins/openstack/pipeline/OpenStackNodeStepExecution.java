@@ -13,16 +13,13 @@ import javax.annotation.Nonnull;
 public class OpenStackNodeStepExecution extends SynchronousNonBlockingStepExecution<JCloudsSlave> {
 
     private final @Nonnull String cloudName;
-    //@NotNull on SlaveOptions removed for simlified test to work
-    private SlaveOptions slaveOptions;
+    private final @Nonnull SlaveOptions slaveOptions;
     private TemporaryServer temporaryServer;
 
     OpenStackNodeStepExecution(OpenStackNodeStep openStackNodeStep, StepContext context) {
         super(context);
         this.cloudName = openStackNodeStep.getCloud();
-        if (openStackNodeStep.getSlaveOptions() != null) {
-            this.slaveOptions = openStackNodeStep.getSlaveOptions();
-        }
+        this.slaveOptions = openStackNodeStep.getSlaveOptions();
         this.temporaryServer = new TemporaryServer(slaveOptions);
     }
 
@@ -32,4 +29,6 @@ public class OpenStackNodeStepExecution extends SynchronousNonBlockingStepExecut
         ProvisioningActivity.Id id = new ProvisioningActivity.Id(this.cloudName);
         return temporaryServer.provisionSlave(jcl, id, null);
     }
+
+
 }

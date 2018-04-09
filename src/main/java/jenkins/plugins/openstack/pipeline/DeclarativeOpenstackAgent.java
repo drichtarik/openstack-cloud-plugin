@@ -32,24 +32,20 @@ public class DeclarativeOpenstackAgent extends DeclarativeAgent<DeclarativeOpens
     private Integer retentionTime;
 
     @DataBoundConstructor
-    public DeclarativeOpenstackAgent(String cloud) {
+    public DeclarativeOpenstackAgent(String cloud, String bootSource, String hardwareId, String networkId, String userDataId, String floatingIpPool, String securityGroups, String availabilityZone, Integer startTimeout, String keyPairName, String jvmOptions, String fsRoot, String launcherFactory) {
         this.cloud = cloud;
-    }
-
-    @DataBoundSetter
-    public void setBootSource(String bootSource) { this.bootSource = bootSource; }
-
-    @DataBoundSetter
-    public void setHardwareId(String hardwareId) {
+        this.bootSource = bootSource;
         this.hardwareId = hardwareId;
-    }
-
-    @DataBoundSetter
-    public void setNetworkId(String networkId) { this.networkId = networkId; }
-
-    @DataBoundSetter
-    public void setUserDataId(String userDataId) {
+        this.networkId = networkId;
         this.userDataId = userDataId;
+        this.floatingIpPool = floatingIpPool;
+        this.securityGroups = securityGroups;
+        this.availabilityZone = availabilityZone;
+        this.startTimeout = startTimeout;
+        this.keyPairName = keyPairName;
+        this.jvmOptions = jvmOptions;
+        this.fsRoot = fsRoot;
+        this.launcherFactory = launcherFactory;
     }
 
     @DataBoundSetter
@@ -58,48 +54,8 @@ public class DeclarativeOpenstackAgent extends DeclarativeAgent<DeclarativeOpens
     }
 
     @DataBoundSetter
-    public void setFloatingIpPool(String floatingIpPool) {
-        this.floatingIpPool = floatingIpPool;
-    }
-
-    @DataBoundSetter
-    public void setSecurityGroups(String securityGroups) {
-        this.securityGroups = securityGroups;
-    }
-
-    @DataBoundSetter
-    public void setAvailabilityZone(String availabilityZone) {
-        this.availabilityZone = availabilityZone;
-    }
-
-    @DataBoundSetter
-    public void setStartTimeout(Integer startTimeout) {
-        this.startTimeout = startTimeout;
-    }
-
-    @DataBoundSetter
-    public void setKeyPairName(String keyPairName) {
-        this.keyPairName = keyPairName;
-    }
-
-    @DataBoundSetter
     public void setNumExecutors(Integer numExecutors) {
         this.numExecutors = numExecutors;
-    }
-
-    @DataBoundSetter
-    public void setJvmOptions(String jvmOptions) {
-        this.jvmOptions = jvmOptions;
-    }
-
-    @DataBoundSetter
-    public void setFsRoot(String fsRoot) {
-        this.fsRoot = fsRoot;
-    }
-
-    @DataBoundSetter
-    public void setLauncherFactory(String launcherFactory) {
-        this.launcherFactory = launcherFactory;
     }
 
     @DataBoundSetter

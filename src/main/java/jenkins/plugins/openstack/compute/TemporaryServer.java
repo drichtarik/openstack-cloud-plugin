@@ -43,7 +43,6 @@ public class TemporaryServer implements Serializable {
 
     @DataBoundConstructor
     public TemporaryServer(final SlaveOptions slaveOptions) {
-        System.out.println("Druhe hw id: " + slaveOptions.getHardwareId());
         this.slaveOptions = slaveOptions;
     }
 
@@ -61,7 +60,7 @@ public class TemporaryServer implements Serializable {
      * @throws JCloudsCloud.ProvisioningFailedException Provisioning failed.
      */
     public @Nonnull JCloudsSlave provisionSlave(
-            @Nonnull JCloudsCloud cloud, ProvisioningActivity.Id id, TaskListener listener
+            @Nonnull JCloudsCloud cloud, @Nonnull ProvisioningActivity.Id id, TaskListener listener
     ) throws JCloudsCloud.ProvisioningFailedException, InterruptedException {
         int timeout = slaveOptions.getStartTimeout();
         this.cloud = cloud;

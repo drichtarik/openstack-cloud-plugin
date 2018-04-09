@@ -25,25 +25,37 @@ public class OpenStackNodeStep extends Step implements Serializable{
     private String cloud = DEFAULT_CLOUD;
     private SlaveOptions slaveOptions;
 
-    private String bootSource;
-    private String hardwareId;
-    private String networkId;
-    private String userDataId;
+    private final @Nonnull String bootSource;
+    private final @Nonnull String hardwareId;
+    private final @Nonnull String networkId;
+    private final @Nonnull String userDataId;
     private Integer instanceCap;
-    private String floatingIpPool;
-    private String securityGroups;
-    private String availabilityZone;
-    private Integer startTimeout;
-    private String keyPairName;
+    private final @Nonnull String floatingIpPool;
+    private final @Nonnull String securityGroups;
+    private final @Nonnull String availabilityZone;
+    private final @Nonnull Integer startTimeout;
+    private final @Nonnull String keyPairName;
     private Integer numExecutors;
-    private String jvmOptions;
-    private String fsRoot;
-    private String launcherFactory;
+    private final @Nonnull String jvmOptions;
+    private final @Nonnull String fsRoot;
+    private final @Nonnull String launcherFactory;
     private Integer retentionTime;
 
     @DataBoundConstructor
-    public OpenStackNodeStep(String cloud) {
+    public OpenStackNodeStep(String cloud, String bootSource, String hardwareId, String networkId, String userDataId, String floatingIpPool, String securityGroups, String availabilityZone, Integer startTimeout, String keyPairName, String jvmOptions, String fsRoot, String launcherFactory) {
         this.cloud = cloud;
+        this.bootSource = bootSource;
+        this.hardwareId = hardwareId;
+        this.networkId = networkId;
+        this.userDataId = userDataId;
+        this.floatingIpPool = floatingIpPool;
+        this.securityGroups = securityGroups;
+        this.availabilityZone = availabilityZone;
+        this.startTimeout = startTimeout;
+        this.keyPairName = keyPairName;
+        this.jvmOptions = jvmOptions;
+        this.fsRoot = fsRoot;
+        this.launcherFactory = launcherFactory;
     }
 
     @Nonnull
@@ -61,71 +73,13 @@ public class OpenStackNodeStep extends Step implements Serializable{
     }
 
     @DataBoundSetter
-    public void setBootSource(String bootSource) {
-        this.bootSource = bootSource;
-    }
-
-    @DataBoundSetter
-    public void setHardwareId(String hardwareId) { this.hardwareId = hardwareId; }
-
-    @DataBoundSetter
-    public void setNetworkId(String networkId) {
-        this.networkId = networkId;
-    }
-
-    @DataBoundSetter
-    public void setUserDataId(String userDataId) {
-        this.userDataId = userDataId;
-    }
-
-    @DataBoundSetter
     public void setInstanceCap(Integer instanceCap) {
         this.instanceCap = instanceCap;
     }
 
     @DataBoundSetter
-    public void setFloatingIpPool(String floatingIpPool) {
-        this.floatingIpPool = floatingIpPool;
-    }
-
-    @DataBoundSetter
-    public void setSecurityGroups(String securityGroups) {
-        this.securityGroups = securityGroups;
-    }
-
-    @DataBoundSetter
-    public void setAvailabilityZone(String availabilityZone) {
-        this.availabilityZone = availabilityZone;
-    }
-
-    @DataBoundSetter
-    public void setStartTimeout(Integer startTimeout) {
-        this.startTimeout = startTimeout;
-    }
-
-    @DataBoundSetter
-    public void setKeyPairName(String keyPairName) {
-        this.keyPairName = keyPairName;
-    }
-
-    @DataBoundSetter
     public void setNumExecutors(Integer numExecutors) {
         this.numExecutors = numExecutors;
-    }
-
-    @DataBoundSetter
-    public void setJvmOptions(String jvmOptions) {
-        this.jvmOptions = jvmOptions;
-    }
-
-    @DataBoundSetter
-    public void setFsRoot(String fsRoot) {
-        this.fsRoot = fsRoot;
-    }
-
-    @DataBoundSetter
-    public void setLauncherFactory(String launcherFactory) {
-        this.launcherFactory = launcherFactory;
     }
 
     @DataBoundSetter
@@ -136,6 +90,9 @@ public class OpenStackNodeStep extends Step implements Serializable{
     public void createSlaveOptions() {
         //add conditions for user inputs
         //also add constraints on instanceCap, numExecutors, retentionTime
+        this.instanceCap = 1;
+        this.numExecutors = 1;
+        this.retentionTime = 1;
         BootSource boot = new BootSource.VolumeSnapshot(this.bootSource);
         LauncherFactory launch = new LauncherFactory.SSH("");
 
@@ -157,6 +114,10 @@ public class OpenStackNodeStep extends Step implements Serializable{
                 this.retentionTime
         );
         this.slaveOptions = opts;
+        System.out.println(toString());
+        if (this.jvmOptions == null) {
+            System.out.println("Je to null pico");
+        } else System.out.println("Nie je to null pico");
     }
 
     @Override
@@ -182,5 +143,27 @@ public class OpenStackNodeStep extends Step implements Serializable{
         public Set<? extends Class<?>> getRequiredContext() {
             return Collections.singleton(TaskListener.class);
         }
+    }
+
+    @Override
+    public String toString() {
+        return "OpenStackNodeStep{" + '\n' +
+                "cloud='" + cloud + '\'' + '\n' +
+                ", bootSource='" + bootSource + '\'' + '\n' +
+                ", hardwareId='" + hardwareId + '\'' + '\n' +
+                ", networkId='" + networkId + '\'' + '\n' +
+                ", userDataId='" + userDataId + '\'' + '\n' +
+                ", instanceCap=" + instanceCap + '\n' +
+                ", floatingIpPool='" + floatingIpPool + '\'' + '\n' +
+                ", securityGroups='" + securityGroups + '\'' + '\n' +
+                ", availabilityZone='" + availabilityZone + '\'' + '\n' +
+                ", startTimeout=" + startTimeout + '\n' +
+                ", keyPairName='" + keyPairName + '\'' + '\n' +
+                ", numExecutors=" + numExecutors + '\n' +
+                ", jvmOptions='" + jvmOptions + '\'' + '\n' +
+                ", fsRoot='" + fsRoot + '\'' + '\n' +
+                ", launcherFactory='" + launcherFactory + '\'' + '\n' +
+                ", retentionTime=" + retentionTime + '\n' +
+                '}';
     }
 }
