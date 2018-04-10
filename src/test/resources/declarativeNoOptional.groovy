@@ -2,7 +2,7 @@ pipeline {
     agent {
         openstack {
             cloud 'openstack'
-            bootSource 'bootSourceID'
+            bootSource $class: 'Image', name: 'bootSource image name'
             hardwareId 'hardverAjDi'
             networkId 'netvorkAjDi'
             userDataId 'juzrDejtaAjDi'
@@ -13,7 +13,7 @@ pipeline {
             keyPairName 'kiPerNejm'
             jvmOptions 'jvmOpsons'
             fsRoot 'groot'
-            launcherFactory 'SSH'
+            launcherFactory $class: 'SSH', credentialsId: ''
         }
     }
     stages {

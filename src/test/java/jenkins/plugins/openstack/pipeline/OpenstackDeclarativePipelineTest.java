@@ -37,7 +37,7 @@ public class OpenstackDeclarativePipelineTest {
     @Test
     public void boot() throws Exception {
         WorkflowJob boot = j.jenkins.createProject(WorkflowJob.class, "boot");
-        boot.setDefinition(new CpsFlowDefinition(loadPipelineScript("declarativeEnhanced.groovy"), true));
+        boot.setDefinition(new CpsFlowDefinition(loadPipelineScript("declarativeFull.groovy"), true));
         WorkflowRun b = j.assertBuildStatusSuccess(boot.scheduleBuild2(0));
         j.assertLogContains("Hello World!", b);
         //assertThat(openstack.getRunningNodes(), emptyIterable());
@@ -46,7 +46,7 @@ public class OpenstackDeclarativePipelineTest {
     @Test
     public void testIfSlaveCreated() throws Exception {
         WorkflowJob boot = j.jenkins.createProject(WorkflowJob.class, "testIfSlaveCreated");
-        boot.setDefinition(new CpsFlowDefinition(loadPipelineScript("declarativeEnhanced.groovy"), true));
+        boot.setDefinition(new CpsFlowDefinition(loadPipelineScript("declarativeFull.groovy"), true));
         WorkflowRun b = j.assertBuildStatusSuccess(boot.scheduleBuild2(0));
         j.assertLogContains("Hello World!", b);
 
