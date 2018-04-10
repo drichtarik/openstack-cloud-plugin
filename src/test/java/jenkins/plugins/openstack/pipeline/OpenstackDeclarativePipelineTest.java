@@ -40,43 +40,12 @@ public class OpenstackDeclarativePipelineTest {
         boot.setDefinition(new CpsFlowDefinition(loadPipelineScript("declarativeFull.groovy"), true));
         WorkflowRun b = j.assertBuildStatusSuccess(boot.scheduleBuild2(0));
         j.assertLogContains("Hello World!", b);
-        //assertThat(openstack.getRunningNodes(), emptyIterable());
     }
 
     @Test
     public void testIfSlaveCreated() throws Exception {
         WorkflowJob boot = j.jenkins.createProject(WorkflowJob.class, "testIfSlaveCreated");
         boot.setDefinition(new CpsFlowDefinition(loadPipelineScript("declarativeFull.groovy"), true));
-        WorkflowRun b = j.assertBuildStatusSuccess(boot.scheduleBuild2(0));
-        j.assertLogContains("Hello World!", b);
-
-        ArgumentCaptor<ServerCreateBuilder> captor = ArgumentCaptor.forClass(ServerCreateBuilder.class);
-        verify(openstack, times(1)).bootAndWaitActive(captor.capture(), any(Integer.class));
-        List<ServerCreateBuilder> builders = captor.getAllValues();
-        assertEquals(1, builders.size());
-        ServerCreate build = builders.get(0).build();
-        assertEquals("kiPerNejm", build.getKeyName());
-    }
-
-    @Test
-    public void testOptionalSlaveParameters() throws Exception {
-        WorkflowJob boot = j.jenkins.createProject(WorkflowJob.class, "testOptionalSlaveParameters");
-        boot.setDefinition(new CpsFlowDefinition(loadPipelineScript("declarativeNoOptional.groovy"), true));
-        WorkflowRun b = j.assertBuildStatusSuccess(boot.scheduleBuild2(0));
-        j.assertLogContains("Hello World!", b);
-
-        ArgumentCaptor<ServerCreateBuilder> captor = ArgumentCaptor.forClass(ServerCreateBuilder.class);
-        verify(openstack, times(1)).bootAndWaitActive(captor.capture(), any(Integer.class));
-        List<ServerCreateBuilder> builders = captor.getAllValues();
-        assertEquals(1, builders.size());
-        ServerCreate build = builders.get(0).build();
-        assertEquals("kiPerNejm", build.getKeyName());
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void testNullParameters() throws Exception {
-        WorkflowJob boot = j.jenkins.createProject(WorkflowJob.class, "testNullParameters");
-        boot.setDefinition(new CpsFlowDefinition(loadPipelineScript("declarativeNullParameter.groovy"), true));
         WorkflowRun b = j.assertBuildStatusSuccess(boot.scheduleBuild2(0));
         j.assertLogContains("Hello World!", b);
 

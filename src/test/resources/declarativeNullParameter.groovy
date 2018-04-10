@@ -1,22 +1,19 @@
 pipeline {
     agent {
         openstack {
-            cloud 'openstack'
-            bootSource $class: 'Image', name: 'bootSource image name'
-            hardwareId 'hardverAjDi'
-            networkId 'netvorkAjDi'
-            userDataId 'juzrDejtaAjDi'
-            instanceCap 1
-            floatingIpPool 'floutinAjPiPul'
-            securityGroups 'sekjurityGrups'
-            availabilityZone 'evejlabilityZoun'
+            cloud null
+            bootSource null
+            hardwareId null
+            networkId null
+            userDataId null
+            floatingIpPool null
+            securityGroups null
+            availabilityZone null
             startTimeout 1
             keyPairName 'kiPerNejm'
-            numExecutors 1
             jvmOptions null
-            fsRoot 'groot'
+            fsRoot null
             launcherFactory $class: 'SSH', credentialsId: ''
-            retentionTime 1
         }
     }
     stages {

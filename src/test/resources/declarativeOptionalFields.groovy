@@ -7,11 +7,11 @@ pipeline {
             networkId 'netvorkAjDi'
             userDataId 'juzrDejtaAjDi'
             floatingIpPool 'floutinAjPiPul'
-            securityGroups 'sekjurityGrups'
+            securityGroups ''
             availabilityZone 'evejlabilityZoun'
             startTimeout 1
             keyPairName 'kiPerNejm'
-            jvmOptions 'jvmOpsons'
+            jvmOptions null
             fsRoot 'groot'
             launcherFactory $class: 'SSH', credentialsId: ''
         }
