@@ -1,5 +1,7 @@
 package jenkins.plugins.openstack.pipeline;
 
+import jenkins.plugins.openstack.compute.slaveopts.BootSource;
+import jenkins.plugins.openstack.compute.slaveopts.LauncherFactory;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.pipeline.modeldefinition.agent.DeclarativeAgent;
 import org.jenkinsci.plugins.pipeline.modeldefinition.agent.DeclarativeAgentDescriptor;
@@ -15,7 +17,7 @@ public class DeclarativeOpenstackAgent extends DeclarativeAgent<DeclarativeOpens
 
     private String cloud;
 
-    private String bootSource;
+    private BootSource bootSource;
     private String hardwareId;
     private String networkId;
     private String userDataId;
@@ -28,11 +30,11 @@ public class DeclarativeOpenstackAgent extends DeclarativeAgent<DeclarativeOpens
     private Integer numExecutors;
     private String jvmOptions;
     private String fsRoot;
-    private String launcherFactory;
+    private LauncherFactory launcherFactory;
     private Integer retentionTime;
 
     @DataBoundConstructor
-    public DeclarativeOpenstackAgent(String cloud, String bootSource, String hardwareId, String networkId, String userDataId, String floatingIpPool, String securityGroups, String availabilityZone, Integer startTimeout, String keyPairName, String jvmOptions, String fsRoot, String launcherFactory) {
+    public DeclarativeOpenstackAgent(String cloud, BootSource bootSource, String hardwareId, String networkId, String userDataId, String floatingIpPool, String securityGroups, String availabilityZone, Integer startTimeout, String keyPairName, String jvmOptions, String fsRoot, LauncherFactory launcherFactory) {
         this.cloud = cloud;
         this.bootSource = bootSource;
         this.hardwareId = hardwareId;

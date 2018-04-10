@@ -45,6 +45,7 @@ import jenkins.plugins.openstack.compute.JCloudsCloud;
 import jenkins.plugins.openstack.compute.JCloudsSlave;
 import jenkins.plugins.openstack.compute.SlaveOptions;
 import net.sf.json.JSONObject;
+import org.jenkinsci.Symbol;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -200,6 +201,7 @@ public abstract class LauncherFactory extends AbstractDescribableImpl<LauncherFa
             }
         }
 
+        @Symbol("ssh")
         @Extension
         public static final class Desc extends Descriptor<LauncherFactory> {
             @Restricted(DoNotUse.class)
@@ -254,6 +256,7 @@ public abstract class LauncherFactory extends AbstractDescribableImpl<LauncherFa
             return JNLP; // Let's avoid creating instances where we can
         }
 
+        @Symbol("jnlp")
         @Extension
         public static final class Desc extends Descriptor<LauncherFactory> {
             @Override

@@ -11,9 +11,7 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.Set;
@@ -25,24 +23,24 @@ public class OpenStackNodeStep extends Step implements Serializable{
     private String cloud = DEFAULT_CLOUD;
     private SlaveOptions slaveOptions;
 
-    private final @Nonnull String bootSource;
-    private final @Nonnull String hardwareId;
-    private final @Nonnull String networkId;
-    private final @Nonnull String userDataId;
+    private final BootSource bootSource;
+    private final String hardwareId;
+    private final String networkId;
+    private final String userDataId;
     private Integer instanceCap;
-    private final @Nonnull String floatingIpPool;
-    private final @Nonnull String securityGroups;
-    private final @Nonnull String availabilityZone;
-    private final @Nonnull Integer startTimeout;
-    private final @Nonnull String keyPairName;
+    private final String floatingIpPool;
+    private final String securityGroups;
+    private final String availabilityZone;
+    private final Integer startTimeout;
+    private final String keyPairName;
     private Integer numExecutors;
-    private final @Nonnull String jvmOptions;
-    private final @Nonnull String fsRoot;
-    private final @Nonnull String launcherFactory;
+    private final String jvmOptions;
+    private final String fsRoot;
+    private final LauncherFactory launcherFactory;
     private Integer retentionTime;
 
     @DataBoundConstructor
-    public OpenStackNodeStep(String cloud, String bootSource, String hardwareId, String networkId, String userDataId, String floatingIpPool, String securityGroups, String availabilityZone, Integer startTimeout, String keyPairName, String jvmOptions, String fsRoot, String launcherFactory) {
+    public OpenStackNodeStep(String cloud, BootSource bootSource, String hardwareId, String networkId, String userDataId, String floatingIpPool, String securityGroups, String availabilityZone, Integer startTimeout, String keyPairName, String jvmOptions, String fsRoot, LauncherFactory launcherFactory) {
         this.cloud = cloud;
         this.bootSource = bootSource;
         this.hardwareId = hardwareId;
@@ -58,7 +56,6 @@ public class OpenStackNodeStep extends Step implements Serializable{
         this.launcherFactory = launcherFactory;
     }
 
-    @Nonnull
     public String getCloud() {
         return cloud;
     }
@@ -67,37 +64,17 @@ public class OpenStackNodeStep extends Step implements Serializable{
         return slaveOptions;
     }
 
-    @DataBoundSetter
-    public void setSlaveOptions(SlaveOptions slaveOptions) {
-        this.slaveOptions = slaveOptions;
-    }
-
-    @DataBoundSetter
-    public void setInstanceCap(Integer instanceCap) {
-        this.instanceCap = instanceCap;
-    }
-
-    @DataBoundSetter
-    public void setNumExecutors(Integer numExecutors) {
-        this.numExecutors = numExecutors;
-    }
-
-    @DataBoundSetter
-    public void setRetentionTime(Integer retentionTime) {
-        this.retentionTime = retentionTime;
-    }
-
     public void createSlaveOptions() {
         //add conditions for user inputs
         //also add constraints on instanceCap, numExecutors, retentionTime
-        this.instanceCap = 1;
+        this.instanceCap = null;
         this.numExecutors = 1;
-        this.retentionTime = 1;
-        BootSource boot = new BootSource.VolumeSnapshot(this.bootSource);
-        LauncherFactory launch = new LauncherFactory.SSH("");
+        this.retentionTime = 0; //nemusi byt field
+        //BootSource boot = new BootSource.VolumeSnapshot(this.bootSource); //
+        //LauncherFactory launch = new LauncherFactory.SSH("");
 
         SlaveOptions opts = new SlaveOptions(
-                boot,
+                this.bootSource,
                 this.hardwareId,
                 this.networkId,
                 this.userDataId,
@@ -110,14 +87,14 @@ public class OpenStackNodeStep extends Step implements Serializable{
                 this.numExecutors,
                 this.jvmOptions,
                 this.fsRoot,
-                launch,
+                this.launcherFactory,
                 this.retentionTime
         );
         this.slaveOptions = opts;
         System.out.println(toString());
         if (this.jvmOptions == null) {
-            System.out.println("Je to null pico");
-        } else System.out.println("Nie je to null pico");
+            System.out.println("Je to null");
+        } else System.out.println("Nie je to null");
     }
 
     @Override

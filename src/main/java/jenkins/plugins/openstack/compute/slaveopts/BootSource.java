@@ -36,6 +36,7 @@ import jenkins.plugins.openstack.compute.auth.OpenstackCredential;
 import jenkins.plugins.openstack.compute.auth.OpenstackCredentials;
 import jenkins.plugins.openstack.compute.internal.Openstack;
 import net.sf.json.JSONObject;
+import org.jenkinsci.Symbol;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -247,6 +248,7 @@ public abstract class BootSource extends AbstractDescribableImpl<BootSource> imp
             return name.hashCode();
         }
 
+        @Symbol("image")
         @Extension
         public static final class Desc extends BootSourceDescriptor {
             @Override
@@ -361,6 +363,7 @@ public abstract class BootSource extends AbstractDescribableImpl<BootSource> imp
             return name.hashCode();
         }
 
+        @Symbol("volumeSnapshot")
         @Extension
         public static final class Desc extends BootSourceDescriptor {
             @Override
