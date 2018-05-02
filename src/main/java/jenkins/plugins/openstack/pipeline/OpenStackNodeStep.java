@@ -77,7 +77,7 @@ public class OpenStackNodeStep extends Step implements Serializable{
                 this.jvmOptions,
                 this.fsRoot,
                 this.launcherFactory,
-                0
+                10
         );
         this.slaveOptions = opts;
         System.out.println(toString());

@@ -316,7 +316,6 @@ public class JCloudsCloud extends Cloud implements SlaveOptions.Holder {
 
     @Restricted(NoExternalUse.class)
     public /*for mocking*/ @CheckForNull String slaveIsWaitingFor(@Nonnull JCloudsSlave slave) throws ProvisioningFailedException {
-        System.out.println("ADSADSASD" + slave.getSlaveOptions().getLauncherFactory().toString());
         return slave.getSlaveOptions().getLauncherFactory().isWaitingFor(slave);
     }
 

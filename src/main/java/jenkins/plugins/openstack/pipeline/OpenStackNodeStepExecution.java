@@ -1,5 +1,6 @@
 package jenkins.plugins.openstack.pipeline;
 
+import jenkins.model.Jenkins;
 import jenkins.plugins.openstack.compute.JCloudsCloud;
 import jenkins.plugins.openstack.compute.JCloudsSlave;
 import jenkins.plugins.openstack.compute.SlaveOptions;
@@ -27,8 +28,13 @@ public class OpenStackNodeStepExecution extends SynchronousNonBlockingStepExecut
     protected JCloudsSlave run() throws Exception {
         JCloudsCloud jcl = JCloudsCloud.getByName(cloudName);
         ProvisioningActivity.Id id = new ProvisioningActivity.Id(this.cloudName);
-        return temporaryServer.provisionSlave(jcl, id, null);
+        JCloudsSlave newSlave = temporaryServer.provisionSlave(jcl, id, null);
+        Jenkins.getInstance().addNode(newSlave);
+        return newSlave;
     }
 
-
+    @Override
+    public void stop(Throwable cause) throws Exception {
+            super.stop(cause);
+    }
 }
