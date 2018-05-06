@@ -3,7 +3,6 @@ package jenkins.plugins.openstack.pipeline;
 import jenkins.plugins.openstack.compute.JCloudsCloud;
 import jenkins.plugins.openstack.compute.JCloudsSlaveTemplate;
 import jenkins.plugins.openstack.compute.ServerScope;
-import jenkins.plugins.openstack.compute.SlaveOptions;
 import jenkins.plugins.openstack.compute.internal.DestroyMachine;
 import jenkins.plugins.openstack.compute.internal.Openstack;
 import org.jenkinsci.plugins.resourcedisposer.AsyncResourceDisposer;
@@ -28,7 +27,6 @@ public class SimplifiedServer implements Serializable {
     private @Nonnull String cloud;
     private @Nonnull String template;
     private @Nonnull String scope;
-    private @Nonnull SlaveOptions slaveOptions;
 
     public SimplifiedServer(@Nonnull String cloud, @Nonnull String template, @Nonnull String scope) {
         this.template = template;
@@ -41,16 +39,6 @@ public class SimplifiedServer implements Serializable {
         if (t == null) throw new IllegalArgumentException("Invalid template: " + template);
 
         this.srv = t.provision(jcl, serverscope);
-    }
-
-    //@NotNull on SlaveOptions removed for simlified test to work
-    public SimplifiedServer(@Nonnull String cloud, SlaveOptions slaveOptions, @Nonnull String scope) {
-        this.cloud = cloud;
-        this.slaveOptions = slaveOptions;
-        this.scope = scope;
-
-        ServerScope serverScope = ServerScope.parse(scope);
-        JCloudsCloud jCloudsCloud = JCloudsCloud.getByName(cloud);
     }
 
     @Whitelisted
