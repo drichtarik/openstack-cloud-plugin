@@ -82,8 +82,8 @@ public class OpenStackNodeStep extends Step implements Serializable{
         this.slaveOptions = opts;
         System.out.println(toString());
         if (this.jvmOptions == null) {
-            System.out.println("Je to null");
-        } else System.out.println("Nie je to null");
+            System.out.println("JVM is null");
+        } else System.out.println("JVM is not null");
     }
 
     @Override
