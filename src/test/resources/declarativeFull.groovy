@@ -13,7 +13,7 @@ pipeline {
             keyPairName 'kiPerNejm'
             jvmOptions 'jvmOpsons'
             fsRoot 'groot'
-            launcherFactory $class: 'SSH', credentialsId: ''
+            launcherFactory $class: 'JNLP'
         }
     }
     stages {
