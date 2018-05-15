@@ -39,6 +39,7 @@ import org.openstack4j.model.compute.Server;
 import org.openstack4j.model.compute.builder.ServerCreateBuilder;
 import org.openstack4j.openstack.compute.domain.NovaBlockDeviceMappingCreate;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
@@ -84,7 +85,7 @@ public class ProvisioningTest {
     @Test
     public void manuallyProvisionAndKill() throws Exception {
         CloudStatistics cs = CloudStatistics.get();
-        assertThat(cs.getActivities(), Matchers.<ProvisioningActivity>iterableWithSize(0));
+        assertThat(cs.getActivities(), Matchers.iterableWithSize(0));
 
         JCloudsCloud cloud = j.createCloudLaunchingDummySlaves("label");
         JCloudsSlave slave = j.provision(cloud, "label");
@@ -93,7 +94,7 @@ public class ProvisioningTest {
         assertThat(computer.buildEnvironment(TaskListener.NULL).get("OPENSTACK_PUBLIC_IP"), startsWith("42.42.42."));
         assertEquals(computer.getName(), CloudStatistics.get().getActivityFor(computer).getName());
 
-        assertThat(cs.getActivities(), Matchers.<ProvisioningActivity>iterableWithSize(1));
+        assertThat(cs.getActivities(), Matchers.iterableWithSize(1));
         ProvisioningActivity activity = cs.getActivities().get(0);
 
         waitForCloudStatistics(activity, ProvisioningActivity.Phase.OPERATING);
@@ -103,10 +104,6 @@ public class ProvisioningTest {
         assertEquals("node:" + server.getName(), server.getMetadata().get(ServerScope.METADATA_KEY));
 
         computer.doDoDelete();
-        //noinspection deprecation
-        assertTrue("Slave is temporarily offline", computer.isTemporarilyOffline());
-
-        j.triggerOpenstackSlaveCleanup();
         assertEquals("Slave is discarded", null, j.jenkins.getComputer("provisioned"));
         waitForCloudStatistics(activity, ProvisioningActivity.Phase.COMPLETED);
         assertThat(activity.getCurrentPhase(), equalTo(ProvisioningActivity.Phase.COMPLETED));
@@ -143,13 +140,9 @@ public class ProvisioningTest {
         verify(os, times(2)).assignFloatingIp(any(Server.class), eq("custom"));
         verify(os, times(2)).updateInfo(any(Server.class));
         verify(os, atLeastOnce()).destroyServer(any(Server.class));
-        verify(os, atLeastOnce()).getServerById(any(String.class));
-        verify(os, atLeastOnce()).getImageIdsFor(any(String.class));
-
-        verifyNoMoreInteractions(os);
 
         List<ProvisioningActivity> activities = CloudStatistics.get().getActivities();
-        assertThat(activities, Matchers.<ProvisioningActivity>iterableWithSize(2));
+        assertThat(activities, Matchers.iterableWithSize(2));
     }
 
     @Test
@@ -198,7 +191,7 @@ public class ProvisioningTest {
         assertEquals(3, openTmplt.getRunningNodes().size());
     }
 
-    public void assertProvisioned(int expectedCount, Collection<NodeProvisioner.PlannedNode> nodes) throws Exception {
+    private void assertProvisioned(int expectedCount, Collection<NodeProvisioner.PlannedNode> nodes) throws Exception {
         assertEquals(expectedCount, nodes.size());
         for (NodeProvisioner.PlannedNode node : nodes) {
             node.future.get();
@@ -286,60 +279,6 @@ public class ProvisioningTest {
     }
 
     @Test
-    public void allowToUseImageNameAsWellAsId() throws Exception {
-        SlaveOptions opts = j.defaultSlaveOptions().getBuilder().bootSource(new BootSource.Image("image-id")).build();
-        JCloudsCloud cloud = j.configureSlaveLaunching(j.dummyCloud(j.dummySlaveTemplate(opts, "label")));
-
-        Openstack os = cloud.getOpenstack();
-        // simulate same image resolved to different ids
-        when(os.getImageIdsFor(eq("image-id"))).thenReturn(Collections.singletonList("image-id")).thenReturn(Collections.singletonList("something-else"));
-
-        j.provision(cloud, "label"); j.provision(cloud, "label");
-
-        ArgumentCaptor<ServerCreateBuilder> captor = ArgumentCaptor.forClass(ServerCreateBuilder.class);
-        verify(os, times(2)).bootAndWaitActive(captor.capture(), any(Integer.class));
-
-        List<ServerCreateBuilder> builders = captor.getAllValues();
-        assertEquals(2, builders.size());
-        assertEquals("image-id", builders.get(0).build().getImageRef());
-        assertEquals("something-else", builders.get(1).build().getImageRef());
-    }
-
-    @Test
-    public void allowToUseVolumeSnapshotNameAsWellAsId() throws Exception {
-        SlaveOptions opts = j.defaultSlaveOptions().getBuilder().bootSource(new BootSource.VolumeSnapshot("vs-id")).build();
-        JCloudsCloud cloud = j.configureSlaveLaunching(j.dummyCloud(j.dummySlaveTemplate(opts, "label")));
-
-        Openstack os = cloud.getOpenstack();
-        // simulate same snapshot resolved to different ids
-        when(os.getVolumeSnapshotIdsFor(eq("vs-id"))).thenReturn(Collections.singletonList("vs-id")).thenReturn(Collections.singletonList("something-else"));
-
-        j.provision(cloud, "label"); j.provision(cloud, "label");
-
-        ArgumentCaptor<ServerCreateBuilder> captor = ArgumentCaptor.forClass(ServerCreateBuilder.class);
-        verify(os, times(2)).bootAndWaitActive(captor.capture(), any(Integer.class));
-
-        List<ServerCreateBuilder> builders = captor.getAllValues();
-        assertEquals(2, builders.size());
-        assertEquals("vs-id", getVolumeSnapshotId(builders.get(0)));
-        assertEquals("something-else", getVolumeSnapshotId(builders.get(1)));
-    }
-
-    @SuppressWarnings("unchecked")
-    private String getVolumeSnapshotId(ServerCreateBuilder builder) {
-        List<BlockDeviceMappingCreate> mapping = (List<BlockDeviceMappingCreate>) Whitebox.getInternalState(
-                builder.build(),
-                "blockDeviceMapping"
-        );
-
-        assertEquals(1, mapping.size());
-        NovaBlockDeviceMappingCreate device = (NovaBlockDeviceMappingCreate) mapping.get(0);
-        assertEquals(BDMSourceType.SNAPSHOT, device.source_type);
-        assertEquals(BDMDestType.VOLUME, device.destination_type);
-        return device.uuid;
-    }
-
-    @Test
     public void doProvision() throws Exception {
         JCloudsSlaveTemplate constrained = j.dummySlaveTemplate(j.defaultSlaveOptions().getBuilder().instanceCap(1).build(), "label");
         JCloudsSlaveTemplate free = j.dummySlaveTemplate("free");
@@ -384,7 +323,7 @@ public class ProvisioningTest {
         );
 
         List<ProvisioningActivity> all = CloudStatistics.get().getActivities();
-        assertThat(all, Matchers.<ProvisioningActivity>iterableWithSize(2));
+        assertThat(all, Matchers.iterableWithSize(2));
         for (ProvisioningActivity pa : all) {
             waitForCloudStatistics(pa, ProvisioningActivity.Phase.OPERATING);
             assertNotNull(pa.getPhaseExecution(ProvisioningActivity.Phase.OPERATING));
@@ -499,6 +438,7 @@ public class ProvisioningTest {
             String msg = ex.getCause().getMessage();
             assertThat(msg, containsString("Failed to connect agent"));
             assertThat(msg, containsString("JNLP connection was not established yet"));
+            assertThat("Server details are printed", msg, containsString("Server state: Mock for "));
         }
 
         verify(cloud.getOpenstack()).destroyServer(any(Server.class));
@@ -509,26 +449,33 @@ public class ProvisioningTest {
         JCloudsCloud cloud = j.configureSlaveLaunching(j.dummyCloud(j.dummySlaveTemplate("label")));
         JCloudsSlave slave = j.provision(cloud, "label");
         slave.toComputer().setTemporarilyOffline(true, new DiskSpaceMonitorDescriptor.DiskSpace("/Fake/it", 42));
-
         ((JCloudsComputer) slave.toComputer()).deleteSlave();
 
         ProvisioningActivity pa = CloudStatistics.get().getActivityFor(slave);
         List<PhaseExecutionAttachment> attachments = pa.getPhaseExecution(ProvisioningActivity.Phase.COMPLETED).getAttachments();
-        assertThat(attachments, Matchers.<PhaseExecutionAttachment>iterableWithSize(1));
+        assertThat(attachments, Matchers.iterableWithSize(1));
         PhaseExecutionAttachment att = attachments.get(0);
         assertEquals("Disk space is too low. Only 0.000GB left on /Fake/it.", att.getTitle());
 
         slave = j.provision(cloud, "label");
-        OfflineCause.ChannelTermination cause = new OfflineCause.ChannelTermination(new RuntimeException("Broken alright"));
-        slave.toComputer().setTemporarilyOffline(true, cause);
-
+        slave.toComputer().setTemporarilyOffline(true, new OfflineCause.ChannelTermination(new RuntimeException("Broken alright")));
         ((JCloudsComputer) slave.toComputer()).deleteSlave();
 
         pa = CloudStatistics.get().getActivityFor(slave);
         attachments = pa.getPhaseExecution(ProvisioningActivity.Phase.COMPLETED).getAttachments();
-        assertThat(attachments, Matchers.<PhaseExecutionAttachment>iterableWithSize(1));
+        assertThat(attachments, Matchers.iterableWithSize(1));
         att = attachments.get(0);
         assertThat(att.getTitle(), startsWith("Connection was broken: java.lang.RuntimeException: Broken alright"));
+
+        slave = j.provision(cloud, "label");
+        slave.toComputer().disconnect(new OfflineCause.ChannelTermination(new IOException("Broken badly")));
+        ((JCloudsComputer) slave.toComputer()).deleteSlave();
+
+        pa = CloudStatistics.get().getActivityFor(slave);
+        attachments = pa.getPhaseExecution(ProvisioningActivity.Phase.COMPLETED).getAttachments();
+        assertThat(attachments, Matchers.iterableWithSize(1));
+        att = attachments.get(0);
+        assertThat(att.getTitle(), startsWith("Connection was broken: java.io.IOException: Broken badly"));
     }
 
     /**
@@ -570,6 +517,7 @@ public class ProvisioningTest {
         final int millisecondsToWaitBetweenPolls = 100;
         final int maxTimeToWaitInMilliseconds = 5000;
         final AsyncResourceDisposer disposer = AsyncResourceDisposer.get();
+        //noinspection deprecation
         disposer.reschedule();
         final long timestampBeforeWaiting = System.nanoTime();
         while (true) {

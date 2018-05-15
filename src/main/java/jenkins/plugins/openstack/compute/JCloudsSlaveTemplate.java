@@ -1,19 +1,20 @@
 package jenkins.plugins.openstack.compute;
 
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Logger;
-import java.util.regex.Pattern;
-
+import au.com.bytecode.opencsv.CSVReader;
 import com.google.common.base.Charsets;
+import com.google.common.base.Strings;
+import hudson.Extension;
+import hudson.Util;
+import hudson.model.Describable;
+import hudson.model.Descriptor;
+import hudson.model.Label;
+import hudson.model.TaskListener;
+import hudson.model.labels.LabelAtom;
 import hudson.remoting.Base64;
+import hudson.util.FormValidation;
+import jenkins.model.Jenkins;
 import jenkins.plugins.openstack.compute.internal.DestroyMachine;
+import jenkins.plugins.openstack.compute.internal.Openstack;
 import jenkins.plugins.openstack.compute.slaveopts.BootSource;
 import jenkins.plugins.openstack.compute.slaveopts.LauncherFactory;
 import org.jenkinsci.lib.configprovider.ConfigProvider;
@@ -30,22 +31,18 @@ import org.openstack4j.api.Builders;
 import org.openstack4j.model.compute.Server;
 import org.openstack4j.model.compute.builder.ServerCreateBuilder;
 
-import com.google.common.base.Strings;
-
-import au.com.bytecode.opencsv.CSVReader;
-import hudson.Extension;
-import hudson.Util;
-import hudson.model.Describable;
-import hudson.model.Descriptor;
-import hudson.model.Label;
-import hudson.model.TaskListener;
-import hudson.model.labels.LabelAtom;
-import hudson.util.FormValidation;
-import jenkins.model.Jenkins;
-import jenkins.plugins.openstack.compute.internal.Openstack;
-
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 /**
  * @author Vijay Kiran
@@ -97,7 +94,7 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
         readResolve();
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "UnusedReturnValue"})
     private Object readResolve() {
         // Initializes data structure that we don't persist.
         labelSet = Label.parse(labelString);
@@ -200,8 +197,8 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
      * @throws JCloudsCloud.ProvisioningFailedException Provisioning failed.
      */
     public @Nonnull JCloudsSlave provisionSlave(
-            @Nonnull JCloudsCloud cloud, @Nonnull ProvisioningActivity.Id id, @Nonnull TaskListener listener
-    ) throws JCloudsCloud.ProvisioningFailedException, InterruptedException {
+            @Nonnull JCloudsCloud cloud, @Nonnull ProvisioningActivity.Id id
+    ) throws JCloudsCloud.ProvisioningFailedException {
         SlaveOptions opts = getEffectiveSlaveOptions();
         int timeout = opts.getStartTimeout();
         Server nodeMetadata = provision(cloud);
@@ -214,9 +211,24 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
             String cause;
             while ((cause = cloud.slaveIsWaitingFor(node)) != null) {
                 if ((System.currentTimeMillis() - node.getCreatedTime()) > timeout) {
+
                     String timeoutMessage = String.format("Failed to connect agent %s within timeout (%d ms): %s", node.getNodeName(), timeout, cause);
+                    Error errorQuerying = null;
+                    try {
+                        Server freshServer = cloud.getOpenstack().getServerById(nodeMetadata.getId());
+                        timeoutMessage += System.lineSeparator() + "Server state: " + freshServer;
+                        // TODO attach instance log (or tail of) to cloud statistics
+                    } catch (NoSuchElementException ex) {
+                        timeoutMessage += System.lineSeparator() + "Server does no longer exist: " + nodeMetadata.getId();
+                    } catch (Error ex) {
+                        errorQuerying = ex;
+                    }
                     LOGGER.warning(timeoutMessage);
-                    throw new JCloudsCloud.ProvisioningFailedException(timeoutMessage);
+                    JCloudsCloud.ProvisioningFailedException ex = new JCloudsCloud.ProvisioningFailedException(timeoutMessage);
+                    if (errorQuerying != null) {
+                        ex.addSuppressed(errorQuerying);
+                    }
+                    throw ex;
                 }
 
                 Thread.sleep(2000);
@@ -241,7 +253,7 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
      * Provision OpenStack machine.
      *
      * @throws Openstack.ActionFailed In case the provisioning failed.
-     * @see #provisionSlave(JCloudsCloud, ProvisioningActivity.Id, TaskListener)
+     * @see #provisionSlave(JCloudsCloud, ProvisioningActivity.Id)
      */
     /*package*/ @Nonnull Server provision(@Nonnull JCloudsCloud cloud) throws Openstack.ActionFailed {
         return provision(cloud, null);
@@ -281,13 +293,15 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
 
         String nid = opts.getNetworkId();
         if (!Strings.isNullOrEmpty(nid)) {
-            LOGGER.fine("Setting network to " + nid);
-            builder.networks(Collections.singletonList(nid));
+            List<String> networks = openstack.getNetworkIds(Arrays.asList(csvToArray(nid)));
+            LOGGER.fine("Setting networks to " + networks);
+            builder.networks(networks);
         }
 
-        if (!Strings.isNullOrEmpty(opts.getSecurityGroups())) {
-            LOGGER.fine("Setting security groups to " + opts.getSecurityGroups());
-            for (String sg: csvToArray(opts.getSecurityGroups())) {
+        String securityGroups = opts.getSecurityGroups();
+        if (!Strings.isNullOrEmpty(securityGroups)) {
+            LOGGER.fine("Setting security groups to " + securityGroups);
+            for (String sg: csvToArray(securityGroups)) {
                 builder.addSecurityGroup(sg);
             }
         }
@@ -358,7 +372,7 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
         }
     }
 
-    private static String[] csvToArray(final String csv) {
+    private static @Nonnull String[] csvToArray(final String csv) {
         try {
             final CSVReader reader = new CSVReader(new StringReader(csv), SEPARATOR_CHAR);
             final String[] line = reader.readNext();

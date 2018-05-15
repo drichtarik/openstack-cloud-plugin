@@ -1,17 +1,13 @@
 package jenkins.plugins.openstack.compute;
 
+import hudson.model.Computer;
 import hudson.node_monitors.DiskSpaceMonitorDescriptor;
-import hudson.remoting.VirtualChannel;
+import hudson.security.Permission;
 import hudson.slaves.AbstractCloudComputer;
 import hudson.slaves.OfflineCause;
-import hudson.slaves.SlaveComputer;
 import hudson.slaves.OfflineCause.SimpleOfflineCause;
-
-import java.io.IOException;
-import java.util.logging.Logger;
-
+import hudson.slaves.SlaveComputer;
 import jenkins.model.Jenkins;
-
 import org.jenkinsci.plugins.cloudstats.ProvisioningActivity;
 import org.jenkinsci.plugins.cloudstats.TrackedItem;
 import org.kohsuke.accmod.Restricted;
@@ -25,6 +21,10 @@ import org.kohsuke.stapler.StaplerResponse;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * OpenStack version of Jenkins {@link SlaveComputer} - responsible for terminating an instance.
@@ -33,6 +33,19 @@ public class JCloudsComputer extends AbstractCloudComputer<JCloudsSlave> impleme
 
     private static final Logger LOGGER = Logger.getLogger(JCloudsComputer.class.getName());
     private final ProvisioningActivity.Id provisioningId;
+
+    /**
+     * Get all Openstack computers.
+     */
+    public static @Nonnull List<JCloudsComputer> getAll() {
+        ArrayList<JCloudsComputer> out = new ArrayList<>();
+        for (final Computer c : Jenkins.getActiveInstance().getComputers()) {
+            if (c instanceof JCloudsComputer) {
+                out.add((JCloudsComputer) c);
+            }
+        }
+        return out;
+    }
 
     public JCloudsComputer(JCloudsSlave slave) {
         super(slave);
@@ -88,43 +101,39 @@ public class JCloudsComputer extends AbstractCloudComputer<JCloudsSlave> impleme
     }
 
     @Override @Restricted(NoExternalUse.class)
-    public HttpResponse doDoDelete() throws IOException {
-        setPendingDelete(true);
+    public HttpResponse doDoDelete() {
+        checkPermission(Permission.DELETE);
         try {
-            return super.doDoDelete();
-        } catch (IOException|RuntimeException ex) {
-            setPendingDelete(false);
+            deleteSlave();
+            return new HttpRedirect("..");
+        } catch (Exception ex) {
             return HttpResponses.error(500, ex);
         }
     }
 
     @Restricted(NoExternalUse.class)
     public HttpRedirect doScheduleTermination() {
-        checkPermission(DISCONNECT);
+        checkPermission(Permission.DELETE);
         setPendingDelete(true);
         return new HttpRedirect(".");
     }
 
     /**
-     * Delete the slave, terminate the instance. Can be called either by doDoDelete() or from JCloudsRetentionStrategy.
+     * Delete the slave, terminate the instance.
      */
-    public void deleteSlave() throws IOException, InterruptedException {
-        LOGGER.info("Deleting slave " + getName());
+    /*package*/ void deleteSlave() throws IOException, InterruptedException {
         JCloudsSlave slave = getNode();
+        if (slave == null) return; // Slave already deleted
 
-        // Slave already deleted
-        if (slave == null) {
-            LOGGER.info("Skipping, computer is gone already: " + getName());
-            return;
+        LOGGER.info("Deleting slave " + getName());
+        setAcceptingTasks(false); // Prevent accepting further task while we are shutting down
+        try {
+            slave.terminate();
+            LOGGER.info("Deleted slave " + getName());
+        } catch (Throwable ex) {
+            setAcceptingTasks(true);
+            throw ex;
         }
-
-        VirtualChannel channel = slave.getChannel();
-        if (channel != null) {
-            channel.close();
-        }
-        slave.terminate();
-        Jenkins.getActiveInstance().removeNode(slave);
-        LOGGER.info("Deleted slave " + getName());
     }
 
     // Singleton
@@ -132,7 +141,7 @@ public class JCloudsComputer extends AbstractCloudComputer<JCloudsSlave> impleme
 
     private static final class PendingTermination extends SimpleOfflineCause {
 
-        protected PendingTermination() {
+        private PendingTermination() {
             super(Messages._DeletedCause());
         }
     }

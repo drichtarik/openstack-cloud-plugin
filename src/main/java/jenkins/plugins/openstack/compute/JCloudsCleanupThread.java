@@ -1,9 +1,10 @@
 package jenkins.plugins.openstack.compute;
 
-import java.io.ObjectStreamException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -11,7 +12,6 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import hudson.model.Executor;
 import hudson.model.Result;
-import hudson.node_monitors.DiskSpaceMonitorDescriptor;
 import hudson.slaves.Cloud;
 import hudson.slaves.OfflineCause;
 import jenkins.model.CauseOfInterruption;
@@ -45,12 +45,7 @@ import javax.annotation.Nonnull;
 public final class JCloudsCleanupThread extends AsyncPeriodicWork {
     private static final Logger LOGGER = Logger.getLogger(JCloudsCleanupThread.class.getName());
 
-    private transient @Nonnull ListMultimap<String, String> stillFips = ArrayListMultimap.create();
-
-    private Object readResolve() throws ObjectStreamException {
-        stillFips = ArrayListMultimap.create();
-        return this;
-    }
+    private final @Nonnull ListMultimap<String, String> stillFips = ArrayListMultimap.create();
 
     public JCloudsCleanupThread() {
         super("OpenStack slave cleanup");
@@ -63,11 +58,11 @@ public final class JCloudsCleanupThread extends AsyncPeriodicWork {
 
     @Override
     public void execute(TaskListener listener) {
-        @Nonnull List<JCloudsComputer> running = terminateNodesPendingDeletion();
+        terminateNodesPendingDeletion();
 
-        @Nonnull HashMap<String, List<Server>> runningServers = destroyServersOutOfScope();
+        @Nonnull HashMap<JCloudsCloud, List<Server>> runningServers = destroyServersOutOfScope();
 
-        terminatesNodesWithoutServers(running, runningServers);
+        terminatesNodesWithoutServers(runningServers);
 
         cleanOrphanedFips();
     }
@@ -109,28 +104,16 @@ public final class JCloudsCleanupThread extends AsyncPeriodicWork {
         }
     }
 
-    private @Nonnull List<JCloudsComputer> terminateNodesPendingDeletion() {
-        ArrayList<JCloudsComputer> runningNodes = new ArrayList<>();
-        for (final Computer c : Jenkins.getActiveInstance().getComputers()) {
-            if (c instanceof JCloudsComputer) {
-                final JCloudsComputer comp = (JCloudsComputer) c;
+    private void terminateNodesPendingDeletion() {
+        for (final JCloudsComputer comp : JCloudsComputer.getAll()) {
+            if (!comp.isIdle()) continue;
 
-                if (!c.isIdle()) {
-                    runningNodes.add(comp);
-                    continue;
-                }
-
-                final OfflineCause offlineCause = comp.getFatalOfflineCause();
-                if (comp.isPendingDelete() || offlineCause != null) {
-                    LOGGER.log(Level.INFO, "Deleting pending node " + comp.getName() + ". Reason: " + comp.getOfflineCause());
-                    deleteComputer(comp);
-                } else {
-                    runningNodes.add(comp);
-                }
+            final OfflineCause offlineCause = comp.getFatalOfflineCause();
+            if (comp.isPendingDelete() || offlineCause != null) {
+                LOGGER.log(Level.INFO, "Deleting pending node " + comp.getName() + ". Reason: " + comp.getOfflineCause());
+                deleteComputer(comp);
             }
         }
-
-        return runningNodes;
     }
 
     private void deleteComputer(JCloudsComputer comp) {
@@ -152,21 +135,21 @@ public final class JCloudsCleanupThread extends AsyncPeriodicWork {
         }
     }
 
-    private @Nonnull HashMap<String, List<Server>> destroyServersOutOfScope() {
-        HashMap<String, List<Server>> runningServers = new HashMap<>();
-        for (Cloud cloud : Jenkins.getActiveInstance().clouds) {
-            if (cloud instanceof JCloudsCloud) {
-                JCloudsCloud jc = (JCloudsCloud) cloud;
-                runningServers.put(jc.name, new ArrayList<Server>());
-                List<Server> servers = jc.getOpenstack().getRunningNodes();
-                for (Server server : servers) {
-                    ServerScope scope = ServerScope.extract(server);
-                    if (scope.isOutOfScope(server)) {
-                        LOGGER.info("Server " + server.getName() + " run out of its scope " + scope + ". Terminating: " + server);
-                        AsyncResourceDisposer.get().dispose(new DestroyMachine(cloud.name, server.getId()));
-                    } else {
-                        runningServers.get(jc.name).add(server);
-                    }
+    /**
+     * @return Servers not destroyed as they are in scope.
+     */
+    private @Nonnull HashMap<JCloudsCloud, List<Server>> destroyServersOutOfScope() {
+        HashMap<JCloudsCloud, List<Server>> runningServers = new HashMap<>();
+        for (JCloudsCloud jc : JCloudsCloud.getClouds()) {
+            runningServers.put(jc, new ArrayList<>());
+            List<Server> servers = jc.getOpenstack().getRunningNodes();
+            for (Server server : servers) {
+                ServerScope scope = ServerScope.extract(server);
+                if (scope.isOutOfScope(server)) {
+                    LOGGER.info("Server " + server.getName() + " run out of its scope " + scope + ". Terminating: " + server);
+                    AsyncResourceDisposer.get().dispose(new DestroyMachine(jc.name, server.getId()));
+                } else {
+                    runningServers.get(jc).add(server);
                 }
             }
         }
@@ -174,25 +157,53 @@ public final class JCloudsCleanupThread extends AsyncPeriodicWork {
         return runningServers;
     }
 
-    private void terminatesNodesWithoutServers(
-            @Nonnull List<JCloudsComputer> running,
-            @Nonnull HashMap<String, List<Server>> runningServers
-    ) {
-        next_node: for (JCloudsComputer computer: running) {
-            ProvisioningActivity.Id id = computer.getId();
-            if (id == null) continue;
+    private void terminatesNodesWithoutServers(@Nonnull HashMap<JCloudsCloud, List<Server>> runningServers) {
+        Map<String, JCloudsComputer> jenkinsComputers = new HashMap<>();
+        for (JCloudsComputer computer: JCloudsComputer.getAll()) {
+            jenkinsComputers.put(computer.getNode().getServerId(), computer);
+        }
 
-            for (Server server : runningServers.get(id.getCloudName())) {
-                if (server.getName().equals(computer.getName())) continue next_node;
+        // Eliminate computers we have servers for
+        for (Map.Entry<JCloudsCloud, List<Server>> e: runningServers.entrySet()) {
+            for (Server server : e.getValue()) {
+                jenkinsComputers.remove(server.getId());
+            }
+        }
+
+        for (Map.Entry<String, JCloudsComputer> entry : jenkinsComputers.entrySet()) {
+            JCloudsComputer computer = entry.getValue();
+            String id = entry.getKey();
+            String cloudName = computer.getId().getCloudName();
+            JCloudsCloud cloud;
+            try {
+                cloud = JCloudsCloud.getByName(cloudName);
+            } catch (IllegalArgumentException e) {
+                LOGGER.warning("The cloud " + cloudName + " does not longer exists for " + computer.getName());
+                // TODO: we ware unable to perform the double lookup - keeping the node alive. Once we are confident
+                // enough in this, we can do the cleanup anyway
+                continue;
             }
 
-            String msg = "No OpenStack server running for computer " + computer.getName() + ". Terminating.";
+            try { // Double check server does not exist before interrupting jobs
+                Server explicitLookup = cloud.getOpenstack().getServerById(id);
+                LOGGER.severe(getClass().getSimpleName() + " incorrectly detected orphaned computer for " + explicitLookup);
+                continue; // Do not kill it
+            } catch (NoSuchElementException expected) {
+                // Gone as expected
+            }
+
+            String msg = "OpenStack server (" + id + ") is not running for computer " + computer.getName() + ". Terminating!";
             LOGGER.warning(msg);
             deleteComputer(computer, new MessageInterruption(msg));
         }
     }
 
+    @Override protected Level getNormalLoggingLevel() { return Level.FINE; }
+    @Override protected Level getSlowLoggingLevel() { return Level.INFO; }
+
     private static class MessageInterruption extends CauseOfInterruption {
+        private static final long serialVersionUID = 7125610351278586647L;
+
         private final String msg;
 
         private MessageInterruption(String msg) {

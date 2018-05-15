@@ -1,22 +1,15 @@
 package jenkins.plugins.openstack.compute;
 
-import static org.junit.Assert.*;
-import static org.hamcrest.Matchers.startsWith;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Label;
-import hudson.model.Node;
 import hudson.model.Result;
+import hudson.model.User;
 import hudson.node_monitors.DiskSpaceMonitorDescriptor;
+import hudson.slaves.OfflineCause;
 import hudson.util.OneShotEvent;
 import jenkins.model.InterruptedBuildAction;
 import jenkins.plugins.openstack.PluginTestRule;
@@ -24,6 +17,7 @@ import jenkins.plugins.openstack.compute.internal.Openstack;
 import jenkins.plugins.openstack.compute.slaveopts.LauncherFactory;
 import org.hamcrest.Matchers;
 import org.jenkinsci.plugins.resourcedisposer.AsyncResourceDisposer;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
@@ -33,6 +27,21 @@ import org.openstack4j.model.compute.Server;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.NoSuchElementException;
+
+import static org.hamcrest.Matchers.startsWith;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * @author ogondza.
@@ -43,7 +52,7 @@ public class JCloudsCleanupThreadTest {
     public PluginTestRule j = new PluginTestRule();
 
     @Test
-    public void discardOutOfDiskSlave() throws Exception {
+    public void discardTemporarilyOfflineSlave() throws Exception {
         JCloudsCloud cloud = j.configureSlaveLaunching(j.dummyCloud(j.dummySlaveTemplate("label")));
         JCloudsComputer computer = (JCloudsComputer) j.provision(cloud, "label").getComputer();
 
@@ -54,6 +63,37 @@ public class JCloudsCleanupThreadTest {
 
         j.triggerOpenstackSlaveCleanup();
         assertNull(AsyncResourceDisposer.get().getBacklog().toString(), j.jenkins.getComputer(computer.getDisplayName()));
+    }
+
+    @Test
+    public void discardDisconnectedSlave() throws Exception {
+        JCloudsCloud cloud = j.configureSlaveLaunching(j.dummyCloud(j.dummySlaveTemplate("label")));
+        JCloudsComputer computer = (JCloudsComputer) j.provision(cloud, "label").getComputer();
+
+        j.triggerOpenstackSlaveCleanup();
+        assertNotNull(j.jenkins.getComputer(computer.getDisplayName()));
+
+        computer.disconnect(new OfflineCause.ChannelTermination(new IOException("Broken badly")));
+        assertNotNull(j.jenkins.getComputer(computer.getDisplayName()));
+
+        j.triggerOpenstackSlaveCleanup();
+        assertNull(AsyncResourceDisposer.get().getBacklog().toString(), j.jenkins.getComputer(computer.getDisplayName()));
+    }
+
+    @Test @Issue("JENKINS-50313") @Ignore("Not jet fixed")
+    public void doNotDiscardDisconnectedSlaveTemporarilyOfflineBySomeone() throws Exception {
+        JCloudsCloud cloud = j.configureSlaveLaunching(j.dummyCloud(j.dummySlaveTemplate("label")));
+        JCloudsComputer computer = (JCloudsComputer) j.provision(cloud, "label").getComputer();
+
+        j.triggerOpenstackSlaveCleanup();
+        assertNotNull(j.jenkins.getComputer(computer.getDisplayName()));
+
+        computer.setTemporarilyOffline(true, new OfflineCause.UserCause(User.current(), "For testing"));
+        computer.disconnect(new OfflineCause.ChannelTermination(new IOException("Broken badly")));
+        assertNotNull(j.jenkins.getComputer(computer.getDisplayName()));
+
+        j.triggerOpenstackSlaveCleanup();
+        assertNotNull(AsyncResourceDisposer.get().getBacklog().toString(), j.jenkins.getComputer(computer.getDisplayName()));
     }
 
     @Test
@@ -72,6 +112,7 @@ public class JCloudsCleanupThreadTest {
         assertTrue(build.isBuilding());
         assertEquals(build.getBuiltOn(), slave);
 
+        //noinspection ThrowableNotThrown
         computer.doScheduleTermination();
         j.triggerOpenstackSlaveCleanup();
 
@@ -107,7 +148,7 @@ public class JCloudsCleanupThreadTest {
     }
 
     @Test
-    public void deleteLeakedFip() throws Exception {
+    public void deleteLeakedFip() {
         JCloudsCloud cloud = j.dummyCloud();
         Openstack os = cloud.getOpenstack();
         when(os.getFreeFipIds()).thenReturn(Arrays.asList("busy1", "leaked")).thenReturn(Arrays.asList("leaked", "busy2"));
@@ -134,14 +175,16 @@ public class JCloudsCleanupThreadTest {
         blocker.enter.block();
         assertTrue(build.isBuilding());
 
-        when(os.getRunningNodes()).thenReturn(Collections.<Server>emptyList());
+        when(os.getRunningNodes()).thenReturn(Collections.emptyList());
+        String serverId = JCloudsComputer.getAll().get(0).getNode().getServerId();
+        doThrow(new NoSuchElementException()).when(os).getServerById(eq(serverId));
         j.triggerOpenstackSlaveCleanup();
 
         j.assertBuildStatus(Result.ABORTED, build);
         j.waitUntilNoActivity();
         assertThat(
                 build.getAction(InterruptedBuildAction.class).getCauses().get(0).getShortDescription(),
-                startsWith("No OpenStack server running for computer")
+                startsWith("OpenStack server (" + serverId + ") is not running for computer ")
         );
     }
 
@@ -157,11 +200,11 @@ public class JCloudsCleanupThreadTest {
 
         Thread.sleep(2000); // For cloud to kick the machine while build is enqueued
 
-        assertThat(j.jenkins.getNodes(), Matchers.<Node>iterableWithSize(1));
+        assertThat(j.jenkins.getNodes(), Matchers.iterableWithSize(1));
 
         j.triggerOpenstackSlaveCleanup();
 
-        assertThat(j.jenkins.getNodes(), Matchers.<Node>iterableWithSize(1));
+        assertThat(j.jenkins.getNodes(), Matchers.iterableWithSize(1));
     }
 
     private static class BuildBlocker extends TestBuilder {
@@ -169,7 +212,7 @@ public class JCloudsCleanupThreadTest {
         private final OneShotEvent exit = new OneShotEvent();
 
         @Override
-        public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+        public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
             enter.signal();
             exit.block();
             return true;
