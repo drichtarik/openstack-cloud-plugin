@@ -199,7 +199,7 @@ public class TemporaryServer implements Serializable {
         CloudStatistics cs = CloudStatistics.get();
         next_number: for (;;) {
             // Using static counter to ensure colliding template names (between clouds) will not cause a clash
-            String nameCandidate = null + "-" + nodeCounter.getAndIncrement();
+            String nameCandidate = "declarative-agent" + "-" + nodeCounter.getAndIncrement();
 
             // Collide with existing node - quite likely from this cloud
             if (Jenkins.getInstance().getNode(nameCandidate) != null) continue;

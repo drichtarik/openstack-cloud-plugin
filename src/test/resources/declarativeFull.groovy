@@ -9,7 +9,7 @@ pipeline {
             floatingIpPool 'floutinAjPiPul'
             securityGroups 'sekjurityGrups'
             availabilityZone 'evejlabilityZoun'
-            startTimeout 1
+            startTimeout 100000
             keyPairName 'kiPerNejm'
             jvmOptions 'jvmOpsons'
             fsRoot 'groot'

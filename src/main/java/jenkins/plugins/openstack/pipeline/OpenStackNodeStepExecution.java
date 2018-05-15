@@ -1,10 +1,7 @@
 package jenkins.plugins.openstack.pipeline;
 
 import jenkins.model.Jenkins;
-import jenkins.plugins.openstack.compute.JCloudsCloud;
-import jenkins.plugins.openstack.compute.JCloudsSlave;
-import jenkins.plugins.openstack.compute.SlaveOptions;
-import jenkins.plugins.openstack.compute.TemporaryServer;
+import jenkins.plugins.openstack.compute.*;
 import org.jenkinsci.plugins.cloudstats.ProvisioningActivity;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
@@ -16,6 +13,7 @@ public class OpenStackNodeStepExecution extends SynchronousNonBlockingStepExecut
     private final @Nonnull String cloudName;
     private final @Nonnull SlaveOptions slaveOptions;
     private TemporaryServer temporaryServer;
+    private JCloudsSlave newSlave;
 
     OpenStackNodeStepExecution(OpenStackNodeStep openStackNodeStep, StepContext context) {
         super(context);
@@ -28,13 +26,14 @@ public class OpenStackNodeStepExecution extends SynchronousNonBlockingStepExecut
     protected JCloudsSlave run() throws Exception {
         JCloudsCloud jcl = JCloudsCloud.getByName(cloudName);
         ProvisioningActivity.Id id = new ProvisioningActivity.Id(this.cloudName);
-        JCloudsSlave newSlave = temporaryServer.provisionSlave(jcl, id, null);
+        newSlave = temporaryServer.provisionSlave(jcl, id, null);
         Jenkins.getInstance().addNode(newSlave);
         return newSlave;
     }
 
     @Override
     public void stop(Throwable cause) throws Exception {
-            super.stop(cause);
+        //((JCloudsComputer) newSlave.toComputer()).deleteSlave();
+        super.stop(cause);
     }
 }

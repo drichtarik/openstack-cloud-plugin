@@ -228,7 +228,9 @@ public abstract class LauncherFactory extends AbstractDescribableImpl<LauncherFa
 
         public static final LauncherFactory JNLP = new JNLP();
 
-        private JNLP() {}
+        //For the purposes of Declarative Pipeline functionality
+        @DataBoundConstructor
+        public JNLP(){}
 
         @Override
         public ComputerLauncher createLauncher(@Nonnull JCloudsSlave slave) throws IOException {
