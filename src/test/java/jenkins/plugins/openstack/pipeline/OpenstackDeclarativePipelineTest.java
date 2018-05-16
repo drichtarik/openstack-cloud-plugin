@@ -40,7 +40,7 @@ public class OpenstackDeclarativePipelineTest {
         boot.setDefinition(new CpsFlowDefinition(loadPipelineScript("declarativeFull.groovy"), true));
         WorkflowRun b = j.assertBuildStatusSuccess(boot.scheduleBuild2(0));
         j.assertLogContains("Hello World!", b);
-        j.interactiveBreak();
+        //j.interactiveBreak();
     }
 
     @Test

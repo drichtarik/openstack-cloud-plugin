@@ -121,7 +121,7 @@ public class JCloudsComputer extends AbstractCloudComputer<JCloudsSlave> impleme
     /**
      * Delete the slave, terminate the instance.
      */
-    /*package*/ void deleteSlave() throws IOException, InterruptedException {
+    /*package*/public void deleteSlave() throws IOException, InterruptedException {
         JCloudsSlave slave = getNode();
         if (slave == null) return; // Slave already deleted
 

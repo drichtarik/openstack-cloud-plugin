@@ -33,7 +33,7 @@ public class OpenStackNodeStepExecution extends SynchronousNonBlockingStepExecut
 
     @Override
     public void stop(Throwable cause) throws Exception {
-        //((JCloudsComputer) newSlave.toComputer()).deleteSlave();
+        ((JCloudsComputer) newSlave.toComputer()).deleteSlave();
         super.stop(cause);
     }
 }
